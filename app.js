@@ -4,18 +4,19 @@ const Engineer = require('./lib/Engineer')
 const Intern = require('./lib/Intern')
 
 //Import html template
-// const {head,end} = require('./template.js')
+const {head,end} = require('./template.js')
 
 //install npm to run this app
 const {prompt} = require('inquirer')
-// const { promisify } = require('util')
-// const axios = require('axios')
+const { promisify, callbackify } = require('util')
+const axios = require('axios')
 
 //fs that allow user to read and write to files
-// const {writeFile, readFile} = require('fs')
-// const wfs = promisify(writeFile)
-// const rfs = promisify(readFile)
-// const body = []
+const {writeFile, appendFile}  = require('fs')
+const fs = require('fs')
+const wfs = promisify(writeFile)
+const apfs = promisify(appendFile)
+const body = []
 
 //Employee list that contain all employees information
 let employeeList = {
@@ -71,6 +72,7 @@ let newProfile = () =>
  prompt(createQuestions())
  .then(data => {
 
+    //Check if data.name is undefined, push if not
      if(data.name !== undefined)
      {info.push(data.name)}
 
@@ -111,43 +113,134 @@ const generateID = () =>
 {
     return Math.ceil(Math.random() * 9999)
 }
+
+let generateHTML = () =>
+{
+    wfs('./output/team.html','','utf8')
+    const log = fs.createWriteStream('./output/team.html', {flags : 'a'})
+    log.write(head)
+    for(const prop in employeeList)
+                {
+                    let obj = employeeList[prop]
+                    for(const key in obj)
+                    {
+                       log.write(createCard(obj[key]))
+                    }
+                }
+
+    log.write(end)
+    log.end()     
+}
+
+let createCard = (obj) =>
+{    
+     let temp = ''
+    switch(obj.getRole())
+    {
+            case 'Manager':
+                temp =  `Office number: ${obj.getOfficeNumber()}`
+            break
+            case 'Engineer':
+                temp = `Github: ${obj.getGithub()}`
+            break
+            case 'Intern':
+                temp = `School: ${obj.getSchool()}`
+            break
+    }
+  
+    return `  <div class="card border-success mb-3" style="max-width: 18rem;">
+    <div class="card-header border-info p-3 mb-2 bg-dark text-info">
+        <h5 class="card-title">${obj.getName()}</h5>
+        <h5 class="card-title">${obj.getRole()}</h5>
+    </div>
+    <div class="card-body text-info">
+          <section class ='card-text'> 
+            <p>ID: ${obj.getId()}</p>
+            <p>Email: ${obj.getEmail()}</p>
+            <p>${temp}</p>
+          </section>
+    </div>
+</div>`
+}
+
 //Display all the existing profiles on CLI
 let viewProfile = () =>
 {
-    console.log(employeeList)
+    for(const prop in employeeList)
+    {
+        console.log(`=>>>>>>>> ${(prop).toUpperCase()}<<<<<<<<=`)
+        let obj = employeeList[prop]
+        for(const key in obj)
+        console.log(`Name: ${obj[key].getName()} role: ${obj[key].getRole()}`)
+
+    }
+    init()
 }
 
 //Open a web page that display all the profiles
 let viewProfileOnWeb = () =>
 {
     console.log('view profile on web')
+    init()
 }
 
 //Allow user to edit existing profiles
 let editProfile = () =>
 {
-    console.log('edit profile')
+    let tempList = []
+    for(const prop in employeeList)
+    {
+        let obj = employeeList[prop]
+        for(const key in obj)
+        tempList.push(`Name: ${obj[key].getName()} role: ${obj[key].getRole()} id: ${obj[key].getId()}`)
+
+    }
+
+   if(tempList.length > 0)
+    {
+        prompt({
+            type: 'list',
+            name: 'choices',
+            message: 'Select an employee to edit',
+            choices: tempList
+    })
+    .then(data => console.log(data))
+    .catch(err => console.log(err))
+    }else{
+        console.log('Please add an employee before you can edit')
+        init()}
+
+
 }
 
+let count = 0
 //Create new object and push it into employee list
 let createNewProfile = (info) =>
 {  
-    let emp
     switch(isRole)
     {
         case 'Manager':
             employeeList.manager.push(new Manager(info[0],info[1],info[2],info[3]))
             isManager = true
+            count++
             role.splice(0,1)
+            generateHTML()
+            init()
             break
         case 'Engineer':
             employeeList.engineer.push(new Engineer(info[0],info[1],info[2],info[3]))
+            count++
+            generateHTML()
+            init()
             break   
          case 'Intern':
             employeeList.intern.push(new Intern(info[0],info[1],info[2],info[3]))
+            count++
+            generateHTML()
+            init()
             break   
     }
-    init()
+  
 }
 
 //First stage when open on CLI 
@@ -156,14 +249,13 @@ let init = () =>
     isRole = ''
     index = 0
     info = []
-
     console.log(`================Welcome to template engine================`)
      prompt(
          {
             type: 'list',
             name: 'choices',
-            message: `Please select one of the folling:`,
-            choices : ['Add new profile','View team profile','View team profile on >>website<<','Edit team profile']
+            message: `Please select one of the following:`,
+            choices : ['Add new profile','View team profile','View team profile on >>website<<','Edit team profile','Exit']
          }
      )
     .then(({choices}) => {
