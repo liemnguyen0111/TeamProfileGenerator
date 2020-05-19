@@ -7,16 +7,15 @@ const Intern = require('./lib/Intern')
 const {head,end} = require('./template.js')
 
 //install npm to run this app
+const opn = require('opn')
 const {prompt} = require('inquirer')
-const { promisify, callbackify } = require('util')
+const { promisify} = require('util')
 const axios = require('axios')
 
 //fs that allow user to read and write to files
-const {writeFile, appendFile}  = require('fs')
+const {writeFile}  = require('fs')
 const fs = require('fs')
 const wfs = promisify(writeFile)
-const apfs = promisify(appendFile)
-const body = []
 
 //Employee list that contain all employees information
 let employeeList = {
@@ -59,9 +58,19 @@ let createQuestions = () =>
             type: 'input',
             name: 'name',
             message: keys[index],
-            choices : role
                    }
     }
+}
+let url = ''
+let validateUsername = (username) =>
+{
+    axios.get((`https://api.github.com/users/${username}`))
+    .then(({data}) => {
+        url = data.html_url
+    })
+    .catch(() => {
+        console.log(err)
+    })
 }
 
 //Prompt user with questions to create new profile
@@ -75,6 +84,10 @@ let newProfile = () =>
     //Check if data.name is undefined, push if not
      if(data.name !== undefined)
      {info.push(data.name)}
+
+     //if role is engineer, check for github username
+     if(isRole === 'Engineer' && index === 3)
+     validateUsername(data.name)
 
     // console.log(data)
     //insert key to keys to create questions depend on the role
@@ -132,6 +145,7 @@ let generateHTML = () =>
     log.end()     
 }
 
+//Create card for each employee
 let createCard = (obj) =>
 {    
      let temp = ''
@@ -141,7 +155,7 @@ let createCard = (obj) =>
                 temp =  `Office number: ${obj.getOfficeNumber()}`
             break
             case 'Engineer':
-                temp = `Github: ${obj.getGithub()}`
+                temp = `Github: <a href ="${url}" target = 'window'>${obj.getGithub()}</a>`
             break
             case 'Intern':
                 temp = `School: ${obj.getSchool()}`
@@ -156,7 +170,7 @@ let createCard = (obj) =>
     <div class="card-body text-info">
           <section class ='card-text'> 
             <p>ID: ${obj.getId()}</p>
-            <p>Email: ${obj.getEmail()}</p>
+            <p>Email: <a href ='https://gmail.com' target ='window'>${obj.getEmail()}</a></p>
             <p>${temp}</p>
           </section>
     </div>
@@ -180,7 +194,7 @@ let viewProfile = () =>
 //Open a web page that display all the profiles
 let viewProfileOnWeb = () =>
 {
-    console.log('view profile on web')
+    opn('./output/team.html')
     init()
 }
 
@@ -213,7 +227,6 @@ let editProfile = () =>
 
 }
 
-let count = 0
 //Create new object and push it into employee list
 let createNewProfile = (info) =>
 {  
@@ -222,25 +235,18 @@ let createNewProfile = (info) =>
         case 'Manager':
             employeeList.manager.push(new Manager(info[0],info[1],info[2],info[3]))
             isManager = true
-            count++
             role.splice(0,1)
-            generateHTML()
-            init()
             break
         case 'Engineer':
             employeeList.engineer.push(new Engineer(info[0],info[1],info[2],info[3]))
-            count++
-            generateHTML()
-            init()
             break   
          case 'Intern':
             employeeList.intern.push(new Intern(info[0],info[1],info[2],info[3]))
-            count++
-            generateHTML()
-            init()
             break   
     }
-  
+
+    generateHTML()
+    init()
 }
 
 //First stage when open on CLI 
