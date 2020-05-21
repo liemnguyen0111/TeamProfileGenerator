@@ -61,12 +61,13 @@ let createQuestions = () =>
                    }
     }
 }
-let url = ''
+
 let validateUsername = (username) =>
 {
     axios.get((`https://api.github.com/users/${username}`))
     .then(({data}) => {
         url = data.html_url
+        info.push(url)
     })
     .catch(() => {
         console.log(err)
@@ -84,10 +85,11 @@ let newProfile = () =>
     //Check if data.name is undefined, push if not
      if(data.name !== undefined)
      {info.push(data.name)}
-
      //if role is engineer, check for github username
      if(isRole === 'Engineer' && index === 3)
-     validateUsername(data.name)
+        validateUsername(data.name)  
+    
+    
 
     // console.log(data)
     //insert key to keys to create questions depend on the role
@@ -112,12 +114,16 @@ let newProfile = () =>
  .catch(err => console.log(err))
 }else
 {
+    //wait for axios to get data then execute these
+    setTimeout(() => {
     //remove the last keys index once the profile is created
     keys.pop()
 
     //Once all the questions are asked, created the profile and push it into the employeeList
     info.splice(1,0,generateID())
     createNewProfile(info)
+    }, 500);
+    
 }
 }
 
@@ -155,7 +161,7 @@ let createCard = (obj) =>
                 temp =  `Office number: ${obj.getOfficeNumber()}`
             break
             case 'Engineer':
-                temp = `Github: <a href ="${url}" target = 'window'>${obj.getGithub()}</a>`
+                temp = `Github: <a href ="${obj.getUrl()}" target = 'window'>${obj.getGithub()}</a>`
             break
             case 'Intern':
                 temp = `School: ${obj.getSchool()}`
@@ -238,7 +244,7 @@ let createNewProfile = (info) =>
             role.splice(0,1)
             break
         case 'Engineer':
-            employeeList.engineer.push(new Engineer(info[0],info[1],info[2],info[3]))
+            employeeList.engineer.push(new Engineer(info[0],info[1],info[2],info[3],info[4]))
             break   
          case 'Intern':
             employeeList.intern.push(new Intern(info[0],info[1],info[2],info[3]))
